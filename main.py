@@ -16,6 +16,7 @@ app.include_router(artifacts.router)
 # Allow requests from your Vue dev server
 origins = [
     "http://localhost:5173",  # Vue dev server
+    "http://localhost:3000",
     "http://127.0.0.1:60054",
     # add other allowed origins if needed
 ]
