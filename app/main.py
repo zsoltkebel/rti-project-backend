@@ -6,18 +6,20 @@ import os
 import json
 import shutil
 from fastapi.middleware.cors import CORSMiddleware
-from backend.api import artifacts
+from .routers import artifacts
+from .routers import secret
 
 app = FastAPI()
 
 app.include_router(artifacts.router)
-
+app.include_router(secret.authenticated_router)
 
 # Allow requests from your Vue dev server
 origins = [
     "http://localhost:5173",  # Vue dev server
     "http://localhost:3000",
     "http://127.0.0.1:60054",
+    "https://zsoltkebel.github.io/",
     # add other allowed origins if needed
 ]
 
@@ -38,7 +40,7 @@ def artifact_dir(id):
 
 
 from fastapi.staticfiles import StaticFiles
-app.mount("/files/artifacts", StaticFiles(directory="uploads/artifacts"), name="artifacts")
+app.mount("/files/artifacts", StaticFiles(directory="/Users/zsoltkebel/Developer/uni-work/backend/uploads/artifacts/"), name="artifacts")
 
 
 

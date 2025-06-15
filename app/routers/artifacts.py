@@ -1,17 +1,18 @@
 from fastapi import APIRouter, Form, UploadFile, File, Path, Request, HTTPException
 from fastapi.responses import JSONResponse
 from typing import List, Union
-from backend.api.utils import upload_files
+from app.utils.utils import upload_files, get_artifact_preview
 import uuid
 import os
 import shutil
 import json
+from ..utils.paths import ARTIFACTS_DIR
 
 router = APIRouter(
     prefix="/artifacts",
 )
 
-ARTIFACTS_DIR = os.path.join("uploads", "artifacts")
+# ARTIFACTS_DIR = os.path.join("files", "artifacts")
 UPLOAD_BASE = "uploads"
 
 
@@ -25,6 +26,7 @@ async def read_artifacts():
         return JSONResponse(content={"artifacts": []})
 
     for artifact_id in os.listdir(ARTIFACTS_DIR):
+        print("checking", artifact_id)
         artifact_dir = os.path.join(ARTIFACTS_DIR, artifact_id)
 
         if not os.path.isdir(artifact_dir):
@@ -43,66 +45,27 @@ async def read_artifacts():
         num_images = count_items_in_dir(os.path.join(artifact_dir, "images"))
         num_rtis = count_items_in_dir(os.path.join(artifact_dir, "RTIs"))  # TODO rename rti to rtis
 
-        # get a thumbnail from rti or images
-        try:
-            rti_id = os.listdir(os.path.join(artifact_dir, "RTIs"))[0]
-            thumbnail_file = os.path.join(artifact_dir, "RTIs", rti_id, "thumbnail.jpg")
-            if not os.path.isfile(thumbnail_file):
-                raise Exception()
-        except:
-            try:
-                image_id = os.listdir(os.path.join(artifact_dir, "images"))[0]
-                thumbnail_file = os.path.join(artifact_dir, "images", image_id)
-                if not os.path.isfile(thumbnail_file):
-                    raise Exception()
-            except:
-                thumbnail_file = ""
-
+        artifact = get_artifact_preview(artifact_id)
 
 
         # Build the artifact JSON
-        artifact = {
-            "id": artifact_id,
-            "title": metadata.get("title", ""),
-            "description": metadata.get("description", ""),
-            "creator": metadata.get("creator", "Unknown"),
-            "date": metadata.get("date", ""),
-            "copyright": metadata.get("copyright", ""),
-            "tags": metadata.get("tags", []),
-            "num_images": num_images,
-            "num_rtis": num_rtis,
-            "thumbnail": thumbnail_file.replace("uploads", "/files"),
-        }
+        # artifact = {
+        #     "id": artifact_id,
+        #     "title": metadata.get("title", ""),
+        #     "description": metadata.get("description", ""),
+        #     "creator": metadata.get("creator", "Unknown"),
+        #     "date": metadata.get("date", ""),
+        #     "copyright": metadata.get("copyright", ""),
+        #     "tags": metadata.get("tags", []),
+        #     "num_images": num_images,
+        #     "num_rtis": num_rtis,
+        #     "thumbnail": thumbnail_file.replace("uploads", "/files"),
+        # }
 
         artifacts.append(artifact)
 
     return {"artifacts": artifacts}
 
-
-@router.post("/")
-async def create_artifact(
-    request: Request,
-    metadata: str = Form(None),
-    images: list[UploadFile] = File(None),
-    RTIKeys: list[str] = None,
-):
-    # Generate a unique artifact ID
-    artifact_id = str(uuid.uuid4())
-
-    # Create directories
-    artifact_dir = os.path.join(ARTIFACTS_DIR, artifact_id)
-    os.makedirs(artifact_dir)
-
-    # Metadata
-    update_metadata(artifact_id, metadata)
-
-    # Images (still)
-    update_images(artifact_id, images)
-    
-    # RTIs
-    await update_RTIs(artifact_id, RTIKeys, request)
-
-    return JSONResponse({"artifact_id": artifact_id, "message": "Upload successful"})
 
 
 @router.get("/{artifact_id}")
@@ -161,72 +124,6 @@ def put_images(dir, images: list[Union[UploadFile, str]]):
                 print(f"Added: {image_file.filename}")
 
 
-def update_metadata(artifact_id, metadata):
-    if metadata is not None:
-        try:
-            metadata_obj = json.loads(metadata)
-            metadata_path = os.path.join(ARTIFACTS_DIR, artifact_id, "metadata.json")
-            with open(metadata_path, "w", encoding="utf-8") as f:
-                json.dump(metadata_obj, f, ensure_ascii=False, indent=2)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid JSON in metadata")
-
-def update_images(artifact_id, images):
-    if images is not None:
-        # Delete all previous images
-        images_dir = os.path.join(ARTIFACTS_DIR, artifact_id, 'images')
-        try:
-            shutil.rmtree(images_dir)
-        except FileNotFoundError:
-            pass
-        os.makedirs(images_dir)
-        # Upload new images
-        upload_files(images_dir, images)
-
-async def update_RTIs(artifact_id, RTIKeys, request):
-    if RTIKeys is not None:
-        # Delete all previous RTIs
-        RTIs_dir = os.path.join(ARTIFACTS_DIR, artifact_id, 'RTIs')
-        try:
-            shutil.rmtree(RTIs_dir)
-        except FileNotFoundError:
-            pass
-        os.makedirs(RTIs_dir)
-        # Upload new RTIs
-        form = await request.form()  # For additional field such as for RTIs
-        for RTIKey in RTIKeys:
-            files = form.getlist(RTIKey)
-            RTI_id = str(uuid.uuid4())
-            RTI_dir = os.path.join(RTIs_dir, RTI_id)
-            os.makedirs(RTI_dir)
-            upload_files(RTI_dir, files)
-
-
-@router.put("/{artifact_id}")
-async def update_artifact(
-    request: Request,
-    artifact_id: str = Path(..., regex=r"^[\w\-]+$"),
-    metadata: str = Form(None),
-    images: list[Union[UploadFile, str]] = File(None),
-    RTIKeys: list[str] = None,
-):
-    print("Recieved update with metadata:", metadata, "images:", images, "RTIs:", RTIKeys)
-
-    # Check for artifact existence
-    artifact_dir = os.path.join(ARTIFACTS_DIR, artifact_id)
-    if not os.path.exists(artifact_dir):
-        raise HTTPException(status_code=404, detail=f"Artifact with id '{artifact_id}' not found.")
-
-    # Metadata
-    update_metadata(artifact_id, metadata)
-
-    # Images (still)
-    update_images(artifact_id, images)
-    
-    # RTIs
-    await update_RTIs(artifact_id, RTIKeys, request)
-
-    return JSONResponse({"artifact_id": artifact_id, "message": "Upload successful"})
 
 
 @router.post("/rti")
@@ -373,11 +270,3 @@ def get_relightable_images(artifact_id):
 
     return relightable_media
 
-@router.delete("/{artifact_id}")
-def delete_artifact(
-    artifact_id: str = Path(..., regex=r"^[\w\-]+$"),
-):
-    artifact_dir = os.path.join(ARTIFACTS_DIR, artifact_id)
-    shutil.rmtree(artifact_dir)
-
-    return {"artifact_id": artifact_id, "message": "Deleted successful"}
