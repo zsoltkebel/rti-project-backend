@@ -19,7 +19,7 @@ UPLOAD_BASE = "uploads"
 # Endpoints
 
 @router.get("/")
-async def read_artifacts():
+async def read_artifacts(request: Request):
     artifacts = []
 
     if not os.path.exists(ARTIFACTS_DIR):
@@ -45,7 +45,7 @@ async def read_artifacts():
         num_images = count_items_in_dir(os.path.join(artifact_dir, "images"))
         num_rtis = count_items_in_dir(os.path.join(artifact_dir, "RTIs"))  # TODO rename rti to rtis
 
-        artifact = get_artifact_preview(artifact_id)
+        artifact = get_artifact_preview(artifact_id, base_url=str(request.base_url))
 
 
         # Build the artifact JSON

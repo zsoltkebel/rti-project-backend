@@ -3,11 +3,11 @@ import shutil
 import os
 import json
 from .paths import path_to_artifact, path_to_artifact_images, path_to_artifact_RTIs
-
+from urllib.parse import urljoin
 
 def url_to_file(path):
-    front, end = path.split("uploads/artifacts")
-    return "/files/artifacts" + end
+    # front, end = path.split("uploads/artifacts")
+    return "/files/artifacts" + path
 
 
 def upload_files(dest: str, files: list[UploadFile]):
@@ -18,7 +18,7 @@ def upload_files(dest: str, files: list[UploadFile]):
             print(f"Added: {file.filename}")
 
 
-def get_artifact_preview(id):
+def get_artifact_preview(id, base_url=""):
     try:
         metadata_file = os.path.join(path_to_artifact(id), "metadata.json")
         with open(metadata_file, "r") as file:
@@ -48,5 +48,5 @@ def get_artifact_preview(id):
         "title": metadata.get('title'),
         "description": metadata.get('description'),
         "date": metadata.get('date'),
-        "thumbnail": url_to_file(thumbnail_file),
+        "thumbnail": urljoin(base_url, thumbnail_file),
     }

@@ -40,7 +40,7 @@ def artifact_dir(id):
 
 
 from fastapi.staticfiles import StaticFiles
-app.mount("/files/artifacts", StaticFiles(directory=ARTIFACTS_DIR), name="artifacts")
+app.mount("/uploads/artifacts", StaticFiles(directory=ARTIFACTS_DIR), name="artifacts")
 
 
 
