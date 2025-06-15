@@ -8,6 +8,7 @@ import shutil
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import artifacts
 from .routers import secret
+from .utils.paths import ARTIFACTS_DIR
 
 app = FastAPI()
 
@@ -32,15 +33,14 @@ app.add_middleware(
 )
 
 UPLOAD_DIR = "uploads"
-ARTIFACTS_DIR = os.path.join(UPLOAD_DIR, 'artifacts')
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 
 def artifact_dir(id):
     return os.path.join(ARTIFACTS_DIR, id)
 
 
 from fastapi.staticfiles import StaticFiles
-app.mount("/files/artifacts", StaticFiles(directory="/Users/zsoltkebel/Developer/uni-work/backend/uploads/artifacts/"), name="artifacts")
+app.mount("/files/artifacts", StaticFiles(directory=ARTIFACTS_DIR), name="artifacts")
 
 
 

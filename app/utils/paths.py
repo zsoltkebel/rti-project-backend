@@ -2,7 +2,7 @@ from os.path import join
 
 
 # ARTIFACTS_DIR = join("uploads", "artifacts")
-ARTIFACTS_DIR = "/Users/zsoltkebel/Developer/uni-work/backend/uploads/artifacts/"
+ARTIFACTS_DIR = "uploads/artifacts/"
 
 def path_to_artifact(id):
     """Returns the path to file directory containing the artifact with the specified ID."""
